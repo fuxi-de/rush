@@ -122,7 +122,7 @@ export default class Crawler {
       const content = await page.evaluate((el) => el.textContent, element);
       return content.trim();
     } catch (e) {
-      console.log(e);
+      console.log("error while resolving item Text", e);
       return "";
     }
   }
