@@ -5,30 +5,34 @@ export default class Crawler {
   private baseUrl: string;
   private cityPath: string; //@TODO maybe this should be postcode or even ipaddress if available
   private searchString: string;
+  private openPages = 0;
+  private browser?: puppeteer.Browser;
 
   constructor(baseUrl: string, cityPath: string, searchString: string) {
     this.baseUrl = baseUrl;
     this.cityPath = cityPath;
     this.searchString = searchString;
+    this.openPages;
   }
 
-  crawl() {
-    (async () => {
-      // Wait for browser launching.
-      const browser = await puppeteer.launch();
-      // Wait for creating the new page.
-      const page = await browser.newPage();
-
-      const itemList = await this.buildItemList(
-        page,
-        `${this.baseUrl}/${this.cityPath}`,
-        "a.section-result"
-      );
-      const url = page.url();
-      if (itemList !== undefined) {
-        itemList.forEach(async (item, index) => {
-          try {
-            const newPage = await browser.newPage();
+  async crawl() {
+    // Wait for browser launching.
+    this.browser = await puppeteer.launch();
+    // Wait for creating the new page.
+    const page = await this.browser.newPage();
+    const itemList = await this.buildItemList(
+      page,
+      `${this.baseUrl}/${this.cityPath}`,
+      "div.section-result"
+    );
+    const url = page.url();
+    if (itemList !== undefined) {
+      itemList.forEach(async (_item, index) => {
+        try {
+          if (this.browser) {
+            const newPage = await this.browser.newPage();
+            this.openPages++;
+            console.log("upwards", this.openPages);
             await newPage.goto(url, {
               waitUntil: "networkidle2",
             });
@@ -40,13 +44,23 @@ export default class Crawler {
               console.log(shopItem);
             }
             await newPage.close();
-          } catch (e) {
-            console.log(e);
+            this.openPages--;
+            console.log("downwards", this.openPages);
+            await this.tryDestruction();
           }
-        });
-      }
-      // await browser.close();
-    })();
+        } catch (e) {
+          console.log(e);
+        }
+      });
+    }
+  }
+
+  async tryDestruction() {
+    if (this.openPages === 0) {
+      console.log("destroying Browser");
+      return await this.browser?.close();
+    }
+    console.log("continuing");
   }
 
   async buildItemList(
@@ -62,6 +76,7 @@ export default class Crawler {
       await searchBar?.type(this.searchString);
       await searchButton?.click();
       await page.waitForNavigation();
+      await page.waitForSelector(selector);
       const itemList = await page.$$(selector);
       return itemList;
     } catch (error) {
@@ -80,7 +95,6 @@ export default class Crawler {
     try {
       await item.click();
       await page.waitForSelector(nameSelector);
-      console.log("url", page.url());
       const currentUtilization = await this.resolveItemText(
         popTimesSelector,
         page

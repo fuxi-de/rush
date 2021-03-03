@@ -5,4 +5,10 @@ const crawler = new Crawler(
   "supermarkt"
 );
 
-crawler.crawl();
+(async () => {
+  try {
+    await crawler.crawl();
+  } catch (e) {
+    console.log(e);
+  }
+})();

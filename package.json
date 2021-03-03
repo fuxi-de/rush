@@ -4,8 +4,10 @@
   "description": "",
   "types": "dist/index.d.ts",
   "scripts": {
+    "prebuild": "rimraf ./dist",
     "build": "tsc",
-    "dev": "tsc-watch --onSuccess 'node ./dist/index.js'"
+    "dev": "tsc-watch --onSuccess 'node ./dist/index.js'",
+    "local": "node ./dist"
   },
   "files": [
     "bin",
